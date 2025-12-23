@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Clock, Play, Check } from 'lucide-react';
+import { Clock, Play, Check, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -54,9 +54,31 @@ const KitchenOrderCard = ({ order, onStartPreparing, onMarkReady }: KitchenOrder
               {isPending ? '🟡 PENDING' : '🔵 PREPARING'}
             </Badge>
           </div>
-          <div className="flex items-center gap-2 text-muted-foreground mt-2">
-            <Clock className="h-4 w-4" />
-            <span className="text-lg">{getElapsedTime(order.createdAt)}</span>
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span className="text-lg">{getElapsedTime(order.createdAt)}</span>
+            </div>
+            <Badge 
+              variant="outline" 
+              className={`flex items-center gap-1 ${
+                order.orderType === 'dine-in' 
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' 
+                  : 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+              }`}
+            >
+              {order.orderType === 'dine-in' ? (
+                <>
+                  <UtensilsCrossed className="h-3 w-3" />
+                  Dine In
+                </>
+              ) : (
+                <>
+                  <ShoppingBag className="h-3 w-3" />
+                  Take Out
+                </>
+              )}
+            </Badge>
           </div>
         </CardHeader>
 

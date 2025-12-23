@@ -1,17 +1,18 @@
-import { CartItem, PaymentMethod } from '@/types/kiosk';
+import { CartItem, PaymentMethod, OrderType } from '@/types/kiosk';
 import { motion } from 'framer-motion';
-import { CreditCard, Smartphone, Banknote, ArrowLeft, Check } from 'lucide-react';
+import { CreditCard, Smartphone, Banknote, ArrowLeft, Check, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
 interface PaymentScreenProps {
   items: CartItem[];
   total: number;
+  orderType: OrderType;
   onBack: () => void;
   onPaymentComplete: (method: PaymentMethod) => void;
 }
 
-export function PaymentScreen({ items, total, onBack, onPaymentComplete }: PaymentScreenProps) {
+export function PaymentScreen({ items, total, orderType, onBack, onPaymentComplete }: PaymentScreenProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [processing, setProcessing] = useState(false);
 
@@ -53,6 +54,22 @@ export function PaymentScreen({ items, total, onBack, onPaymentComplete }: Payme
         {/* Order Summary */}
         <div className="lg:w-1/3 p-6 border-b lg:border-b-0 lg:border-r border-border">
           <h2 className="text-lg font-semibold text-foreground mb-4">Order Summary</h2>
+          
+          {/* Order Type Badge */}
+          <div className="mb-4 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 text-primary">
+            {orderType === 'dine-in' ? (
+              <>
+                <UtensilsCrossed className="w-4 h-4" />
+                <span className="font-medium">Dine In</span>
+              </>
+            ) : (
+              <>
+                <ShoppingBag className="w-4 h-4" />
+                <span className="font-medium">Take Out</span>
+              </>
+            )}
+          </div>
+          
           <div className="space-y-3 mb-6">
             {items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">

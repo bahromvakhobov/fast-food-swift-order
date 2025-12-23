@@ -1,6 +1,6 @@
 import { Order } from '@/types/kiosk';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Printer, Home } from 'lucide-react';
+import { CheckCircle2, Printer, Home, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface OrderConfirmationProps {
@@ -71,6 +71,20 @@ export function OrderConfirmation({ order, onNewOrder, onViewReceipt }: OrderCon
         transition={{ delay: 0.8 }}
         className="bg-secondary/30 rounded-2xl p-6 mb-8 w-full max-w-sm"
       >
+        {/* Order Type */}
+        <div className="flex items-center justify-center gap-2 mb-4 pb-4 border-b border-border">
+          {order.orderType === 'dine-in' ? (
+            <>
+              <UtensilsCrossed className="w-5 h-5 text-primary" />
+              <span className="font-semibold text-foreground">Dine In</span>
+            </>
+          ) : (
+            <>
+              <ShoppingBag className="w-5 h-5 text-primary" />
+              <span className="font-semibold text-foreground">Take Out</span>
+            </>
+          )}
+        </div>
         <div className="flex justify-between text-sm text-muted-foreground mb-2">
           <span>Items</span>
           <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)}</span>
