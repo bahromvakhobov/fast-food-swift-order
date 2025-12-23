@@ -14,6 +14,8 @@ export interface CartItem extends MenuItem {
   quantity: number;
 }
 
+export type OrderType = 'dine-in' | 'take-out';
+
 export interface Order {
   id: string;
   orderNumber: number;
@@ -21,10 +23,11 @@ export interface Order {
   total: number;
   createdAt: Date;
   status: 'pending' | 'preparing' | 'ready' | 'completed';
+  orderType: OrderType;
 }
 
 export type Language = 'uz' | 'en' | 'ru';
 
 export type PaymentMethod = 'card' | 'nfc' | 'cash';
 
-export type Screen = 'menu' | 'checkout' | 'payment' | 'confirmation' | 'receipt';
+export type Screen = 'intro' | 'menu' | 'checkout' | 'payment' | 'confirmation' | 'receipt';

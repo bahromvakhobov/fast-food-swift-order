@@ -1,6 +1,6 @@
 import { Order } from '@/types/kiosk';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Printer, Download } from 'lucide-react';
+import { ArrowLeft, Printer, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ReceiptScreenProps {
@@ -54,6 +54,22 @@ export function ReceiptScreen({ order, onBack, onNewOrder }: ReceiptScreenProps)
               <span className="text-muted-foreground">Order #</span>
               <span className="font-semibold text-foreground">
                 {order.orderNumber.toString().padStart(3, '0')}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Order Type</span>
+              <span className="flex items-center gap-1 font-medium text-foreground">
+                {order.orderType === 'dine-in' ? (
+                  <>
+                    <UtensilsCrossed className="w-3 h-3" />
+                    Dine In
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="w-3 h-3" />
+                    Take Out
+                  </>
+                )}
               </span>
             </div>
             <div className="flex justify-between text-sm">

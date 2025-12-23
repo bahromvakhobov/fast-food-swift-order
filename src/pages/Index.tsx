@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Category, CartItem, MenuItem, Language, Screen, Order, PaymentMethod } from '@/types/kiosk';
+import { Category, CartItem, MenuItem, Language, Screen, Order, PaymentMethod, OrderType } from '@/types/kiosk';
 import { saveOrder } from '@/stores/orderStore';
 import { menuItems } from '@/data/menuData';
 import { CategorySidebar } from '@/components/kiosk/CategorySidebar';
@@ -9,6 +9,7 @@ import { CartPanel } from '@/components/kiosk/CartPanel';
 import { PaymentScreen } from '@/components/kiosk/PaymentScreen';
 import { OrderConfirmation } from '@/components/kiosk/OrderConfirmation';
 import { ReceiptScreen } from '@/components/kiosk/ReceiptScreen';
+import { IntroScreen } from '@/components/kiosk/IntroScreen';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,7 +17,8 @@ const Index = () => {
   const [activeCategory, setActiveCategory] = useState<Category>('tacos');
   const [language, setLanguage] = useState<Language>('en');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [screen, setScreen] = useState<Screen>('menu');
+  const [screen, setScreen] = useState<Screen>('intro');
+  const [orderType, setOrderType] = useState<OrderType>('dine-in');
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const { toast } = useToast();
 
@@ -63,18 +65,24 @@ const Index = () => {
       total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
       createdAt: new Date(),
       status: 'pending',
+      orderType,
     };
     saveOrder(order);
     setCurrentOrder(order);
     setCart([]);
     setScreen('confirmation');
-  }, [cart]);
+  }, [cart, orderType]);
 
   const handleNewOrder = useCallback(() => {
     setCart([]);
     setCurrentOrder(null);
-    setScreen('menu');
+    setScreen('intro');
     setActiveCategory('tacos');
+  }, []);
+
+  const handleSelectOrderType = useCallback((type: OrderType) => {
+    setOrderType(type);
+    setScreen('menu');
   }, []);
 
   const handleViewReceipt = useCallback(() => {
@@ -86,10 +94,19 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex">
       <AnimatePresence mode="wait">
+        {screen === 'intro' && (
+          <IntroScreen
+            language={language}
+            onLanguageChange={setLanguage}
+            onSelectOrderType={handleSelectOrderType}
+          />
+        )}
+
         {screen === 'payment' && (
           <PaymentScreen
             items={cart}
             total={total}
+            orderType={orderType}
             onBack={() => setScreen('menu')}
             onPaymentComplete={handlePaymentComplete}
           />
