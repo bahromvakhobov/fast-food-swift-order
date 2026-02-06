@@ -6,6 +6,9 @@ export interface MenuItem {
   category: Category;
   description?: string;
   available: boolean;
+  ingredients?: string[];
+  modelUrl?: string;
+  hasAR?: boolean;
 }
 
 export type Category = 'tacos' | 'burgers' | 'crepes' | 'drinks' | 'desserts' | 'chicken';

@@ -11,6 +11,7 @@ import { PaymentScreen } from '@/components/kiosk/PaymentScreen';
 import { OrderConfirmation } from '@/components/kiosk/OrderConfirmation';
 import { ReceiptScreen } from '@/components/kiosk/ReceiptScreen';
 import { IntroScreen } from '@/components/kiosk/IntroScreen';
+import { FoodDetailModal } from '@/components/kiosk/FoodDetailModal';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const Index = () => {
@@ -21,6 +22,7 @@ const Index = () => {
   const [orderType, setOrderType] = useState<OrderType>('dine-in');
   const [serviceType, setServiceType] = useState<ServiceType>('self-service');
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
   const filteredItems = menuItems.filter(item => item.category === activeCategory);
 
@@ -166,6 +168,7 @@ const Index = () => {
                     key={item.id}
                     item={item}
                     onAddToCart={addToCart}
+                    onViewDetails={setSelectedItem}
                     index={index}
                   />
                 ))}
@@ -194,6 +197,14 @@ const Index = () => {
           />
         </>
       )}
+
+      {/* Food Detail Modal */}
+      <FoodDetailModal
+        item={selectedItem}
+        isOpen={!!selectedItem}
+        onClose={() => setSelectedItem(null)}
+        onAddToCart={addToCart}
+      />
     </div>
   );
 };
