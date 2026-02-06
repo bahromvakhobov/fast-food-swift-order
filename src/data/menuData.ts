@@ -10,6 +10,7 @@ export const menuItems: MenuItem[] = [
     category: 'tacos',
     description: 'Seasoned beef with fresh toppings',
     available: true,
+    ingredients: ['Beef patty', 'Tortilla', 'Lettuce', 'Tomato', 'Cheese', 'Sour cream'],
   },
   {
     id: 'taco-2',
@@ -19,6 +20,7 @@ export const menuItems: MenuItem[] = [
     category: 'tacos',
     description: 'Grilled chicken with special sauce',
     available: true,
+    ingredients: ['Grilled chicken', 'Tortilla', 'Onion', 'Cilantro', 'Lime', 'Special sauce'],
   },
   {
     id: 'taco-3',
@@ -28,6 +30,7 @@ export const menuItems: MenuItem[] = [
     category: 'tacos',
     description: 'Crispy fish with cabbage slaw',
     available: true,
+    ingredients: ['Crispy fish fillet', 'Cabbage slaw', 'Tortilla', 'Lime crema', 'Pickled onion'],
   },
   {
     id: 'taco-4',
@@ -37,6 +40,7 @@ export const menuItems: MenuItem[] = [
     category: 'tacos',
     description: 'Fresh vegetables with guacamole',
     available: true,
+    ingredients: ['Grilled vegetables', 'Guacamole', 'Tortilla', 'Black beans', 'Corn', 'Salsa'],
   },
 
   // Burgers
@@ -48,6 +52,7 @@ export const menuItems: MenuItem[] = [
     category: 'burgers',
     description: 'Beef patty with melted cheese',
     available: true,
+    ingredients: ['Beef patty', 'Cheddar cheese', 'Lettuce', 'Tomato', 'Onion', 'Special sauce', 'Sesame bun'],
   },
   {
     id: 'burger-2',
@@ -57,6 +62,7 @@ export const menuItems: MenuItem[] = [
     category: 'burgers',
     description: 'Double patty with crispy bacon',
     available: true,
+    ingredients: ['Double beef patty', 'Crispy bacon', 'American cheese', 'Pickles', 'Ketchup', 'Mustard', 'Brioche bun'],
   },
   {
     id: 'burger-3',
@@ -66,6 +72,7 @@ export const menuItems: MenuItem[] = [
     category: 'burgers',
     description: 'Crispy chicken with special mayo',
     available: true,
+    ingredients: ['Crispy chicken fillet', 'Lettuce', 'Tomato', 'Special mayo', 'Pickles', 'Sesame bun'],
   },
   {
     id: 'burger-4',
@@ -75,6 +82,7 @@ export const menuItems: MenuItem[] = [
     category: 'burgers',
     description: 'Plant-based patty with fresh veggies',
     available: true,
+    ingredients: ['Plant-based patty', 'Avocado', 'Lettuce', 'Tomato', 'Vegan mayo', 'Whole wheat bun'],
   },
 
   // Crepes
@@ -86,6 +94,7 @@ export const menuItems: MenuItem[] = [
     category: 'crepes',
     description: 'Filled with rich Nutella spread',
     available: true,
+    ingredients: ['Crepe batter', 'Nutella', 'Banana', 'Powdered sugar'],
   },
   {
     id: 'crepe-2',
@@ -95,6 +104,7 @@ export const menuItems: MenuItem[] = [
     category: 'crepes',
     description: 'Fresh strawberries with cream',
     available: true,
+    ingredients: ['Crepe batter', 'Fresh strawberries', 'Whipped cream', 'Vanilla extract'],
   },
   {
     id: 'crepe-3',
@@ -104,6 +114,7 @@ export const menuItems: MenuItem[] = [
     category: 'crepes',
     description: 'Savory ham with melted cheese',
     available: true,
+    ingredients: ['Crepe batter', 'Ham', 'Swiss cheese', 'Dijon mustard', 'Herbs'],
   },
 
   // Drinks
@@ -115,6 +126,7 @@ export const menuItems: MenuItem[] = [
     category: 'drinks',
     description: 'Classic cola drink',
     available: true,
+    ingredients: ['Carbonated water', 'Sugar', 'Natural flavors'],
   },
   {
     id: 'drink-2',
@@ -124,6 +136,7 @@ export const menuItems: MenuItem[] = [
     category: 'drinks',
     description: 'Freshly squeezed lemonade',
     available: true,
+    ingredients: ['Fresh lemon juice', 'Sugar', 'Water', 'Mint leaves'],
   },
   {
     id: 'drink-3',
@@ -133,6 +146,7 @@ export const menuItems: MenuItem[] = [
     category: 'drinks',
     description: 'Creamy vanilla milkshake',
     available: true,
+    ingredients: ['Vanilla ice cream', 'Whole milk', 'Whipped cream', 'Cherry'],
   },
   {
     id: 'drink-4',
@@ -142,6 +156,7 @@ export const menuItems: MenuItem[] = [
     category: 'drinks',
     description: 'Cold brew with ice',
     available: true,
+    ingredients: ['Cold brew coffee', 'Ice', 'Milk', 'Sugar syrup'],
   },
 
   // Desserts
@@ -153,6 +168,7 @@ export const menuItems: MenuItem[] = [
     category: 'desserts',
     description: 'Rich chocolate brownie',
     available: true,
+    ingredients: ['Dark chocolate', 'Butter', 'Sugar', 'Eggs', 'Flour', 'Walnuts'],
   },
   {
     id: 'dessert-2',
@@ -162,6 +178,7 @@ export const menuItems: MenuItem[] = [
     category: 'desserts',
     description: 'Vanilla ice cream with toppings',
     available: true,
+    ingredients: ['Vanilla ice cream', 'Chocolate sauce', 'Whipped cream', 'Sprinkles', 'Cherry'],
   },
   {
     id: 'dessert-3',
@@ -171,6 +188,7 @@ export const menuItems: MenuItem[] = [
     category: 'desserts',
     description: 'Warm apple pie slice',
     available: true,
+    ingredients: ['Apples', 'Cinnamon', 'Sugar', 'Butter', 'Pie crust', 'Vanilla ice cream'],
   },
 
   // Chicken
@@ -182,6 +200,7 @@ export const menuItems: MenuItem[] = [
     category: 'chicken',
     description: 'Crispy wings with sauce',
     available: true,
+    ingredients: ['Chicken wings', 'Hot sauce', 'Butter', 'Garlic', 'Celery sticks', 'Ranch dip'],
   },
   {
     id: 'chicken-2',
@@ -191,6 +210,7 @@ export const menuItems: MenuItem[] = [
     category: 'chicken',
     description: 'Golden fried chicken tenders',
     available: true,
+    ingredients: ['Chicken breast', 'Breadcrumbs', 'Eggs', 'Flour', 'Spices', 'Honey mustard'],
   },
   {
     id: 'chicken-3',
@@ -200,6 +220,7 @@ export const menuItems: MenuItem[] = [
     category: 'chicken',
     description: 'Grilled chicken with sides',
     available: true,
+    ingredients: ['Grilled chicken breast', 'Rice', 'Grilled vegetables', 'Garlic sauce', 'Herbs'],
   },
   {
     id: 'chicken-4',
@@ -209,6 +230,7 @@ export const menuItems: MenuItem[] = [
     category: 'chicken',
     description: 'Crispy chicken nuggets',
     available: true,
+    ingredients: ['Chicken breast', 'Breadcrumbs', 'Spices', 'Ketchup', 'BBQ sauce'],
   },
 ];
 

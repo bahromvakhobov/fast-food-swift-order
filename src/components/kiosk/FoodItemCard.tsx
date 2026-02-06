@@ -1,22 +1,23 @@
 import { MenuItem } from '@/types/kiosk';
 import { motion } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Plus, RotateCcw } from 'lucide-react';
 import { formatPrice } from '@/lib/currency';
 
 interface FoodItemCardProps {
   item: MenuItem;
   onAddToCart: (item: MenuItem) => void;
+  onViewDetails: (item: MenuItem) => void;
   index: number;
 }
 
-export function FoodItemCard({ item, onAddToCart, index }: FoodItemCardProps) {
+export function FoodItemCard({ item, onAddToCart, onViewDetails, index }: FoodItemCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
       whileTap={{ scale: 0.97 }}
-      onClick={() => item.available && onAddToCart(item)}
+      onClick={() => item.available && onViewDetails(item)}
       className={`
         relative overflow-hidden rounded-3xl bg-card border border-border
         cursor-pointer transition-all duration-300 touch-manipulation
@@ -37,10 +38,22 @@ export function FoodItemCard({ item, onAddToCart, index }: FoodItemCardProps) {
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (item.available) onAddToCart(item);
+          }}
           className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary flex items-center justify-center shadow-button"
         >
           <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
         </motion.button>
+
+        {/* 3D badge */}
+        {item.modelUrl && (
+          <div className="absolute top-2 left-2 px-2 py-1 rounded-full bg-primary/90 backdrop-blur-sm flex items-center gap-1">
+            <RotateCcw className="w-3 h-3 text-primary-foreground" />
+            <span className="text-[10px] font-semibold text-primary-foreground">3D</span>
+          </div>
+        )}
 
         {!item.available && (
           <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
