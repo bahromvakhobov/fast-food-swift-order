@@ -42,9 +42,9 @@ const translations = {
 };
 
 const languages: { code: Language; flag: string }[] = [
-  { code: 'uz', flag: '🇺🇿' },
-  { code: 'en', flag: '🇬🇧' },
-  { code: 'ru', flag: '🇷🇺' },
+  { code: 'uz', flag: 'UZ' },
+  { code: 'en', flag: 'EN' },
+  { code: 'ru', flag: 'RU' },
 ];
 
 export function IntroScreen({ language, onLanguageChange, onSelectOrderType }: IntroScreenProps) {
@@ -63,7 +63,7 @@ export function IntroScreen({ language, onLanguageChange, onSelectOrderType }: I
         className="text-center mb-8 md:mb-12"
       >
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-primary mb-3 md:mb-4">
-          🍔 Tasty Kiosk
+          🍽️ AResto
         </h1>
         <p className="text-2xl sm:text-3xl md:text-4xl font-semibold text-foreground">
           {translations.welcome[language]}
@@ -122,22 +122,38 @@ export function IntroScreen({ language, onLanguageChange, onSelectOrderType }: I
         initial={{ y: 30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="mt-8 md:mt-12 flex gap-3 md:gap-4"
+        className="mt-12 flex gap-4"
       >
-        {languages.map((lang) => (
-          <button
-            key={lang.code}
-            onClick={() => onLanguageChange(lang.code)}
-            className={`text-3xl md:text-4xl p-2 md:p-3 rounded-xl transition-all duration-200 touch-manipulation ${
-              language === lang.code
-                ? 'bg-primary/20 scale-110 ring-2 ring-primary'
-                : 'bg-muted hover:bg-muted/80 hover:scale-105'
-            }`}
-          >
-            {lang.flag}
-          </button>
-        ))}
+        {languages.map((lang) => {
+          const isActive = language === lang.code;
+
+          return (
+            <button
+              key={lang.code}
+              onClick={() => onLanguageChange(lang.code)}
+              className={`
+                min-w-[72px]
+                px-6 py-3
+                rounded-2xl
+                text-lg font-bold
+                transition-all duration-200
+                border-2
+                ${
+                  isActive
+                    ? 'border-primary text-primary shadow-[0_0_0_2px_rgba(249,115,22,0.3)]'
+                    : 'border-border text-white hover:border-primary/60'
+                }
+                bg-card
+                hover:scale-105
+                active:scale-95
+              `}
+            >
+              {lang.flag}
+            </button>
+          );
+        })}
       </motion.div>
+
     </motion.div>
   );
 }

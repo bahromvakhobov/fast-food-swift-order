@@ -1,6 +1,17 @@
 import { Order } from '@/types/kiosk';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Printer, Home, UtensilsCrossed, ShoppingBag, User, ConciergeBell } from 'lucide-react';
+import {
+  CheckCircle2,
+  ClipboardList,
+  ConciergeBell,
+  CreditCard,
+  Home,
+  MapPin,
+  Printer,
+  ShoppingBag,
+  User,
+  UtensilsCrossed,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/currency';
 
@@ -8,9 +19,18 @@ interface OrderConfirmationProps {
   order: Order;
   onNewOrder: () => void;
   onViewReceipt: () => void;
+  onTrackOrder: () => void;
 }
 
-export function OrderConfirmation({ order, onNewOrder, onViewReceipt }: OrderConfirmationProps) {
+export function OrderConfirmation({
+  order,
+  onNewOrder,
+  onViewReceipt,
+  onTrackOrder,
+}: OrderConfirmationProps) {
+  const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const isPaid = order.paymentStatus === 'paid';
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -21,13 +41,13 @@ export function OrderConfirmation({ order, onNewOrder, onViewReceipt }: OrderCon
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
-        transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
+        transition={{ type: 'spring', bounce: 0.5, delay: 0.2 }}
         className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-kiosk-success/20 flex items-center justify-center mb-6 md:mb-8"
       >
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          transition={{ type: "spring", bounce: 0.5, delay: 0.4 }}
+          transition={{ type: 'spring', bounce: 0.5, delay: 0.4 }}
           className="w-18 h-18 md:w-24 md:h-24 rounded-full bg-kiosk-success flex items-center justify-center"
         >
           <CheckCircle2 className="w-10 h-10 md:w-12 md:h-12 text-white" />
@@ -52,7 +72,6 @@ export function OrderConfirmation({ order, onNewOrder, onViewReceipt }: OrderCon
         Buyurtmangiz muvaffaqiyatli qabul qilindi
       </motion.p>
 
-      {/* Order Number */}
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -65,45 +84,52 @@ export function OrderConfirmation({ order, onNewOrder, onViewReceipt }: OrderCon
         </p>
       </motion.div>
 
-      {/* Order Details */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8 }}
         className="bg-secondary/30 rounded-2xl p-4 md:p-6 mb-6 md:mb-8 w-full max-w-sm"
       >
-        {/* Order Type & Service Type */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-4 pb-4 border-b border-border">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10">
-            {order.orderType === 'dine-in' ? (
-              <>
-                <UtensilsCrossed className="w-4 h-4 text-primary" />
-                <span className="font-medium text-foreground text-sm">Bu yerda</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag className="w-4 h-4 text-primary" />
-                <span className="font-medium text-foreground text-sm">Olib ketish</span>
-              </>
-            )}
+        <div className="flex flex-col items-center justify-center mb-4 pb-4 border-b border-border">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10">
+              {order.orderType === 'dine-in' ? (
+                <>
+                  <UtensilsCrossed className="w-4 h-4 text-primary" />
+                  <span className="font-medium text-foreground text-sm">Bu yerda</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag className="w-4 h-4 text-primary" />
+                  <span className="font-medium text-foreground text-sm">Olib ketish</span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary">
+              {order.serviceType === 'self-service' ? (
+                <>
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium text-foreground text-sm">O'z-o'ziga xizmat</span>
+                </>
+              ) : (
+                <>
+                  <ConciergeBell className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium text-foreground text-sm">Ofitsiant</span>
+                </>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary">
-            {order.serviceType === 'self-service' ? (
-              <>
-                <User className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium text-foreground text-sm">O'z-o'ziga xizmat</span>
-              </>
-            ) : (
-              <>
-                <ConciergeBell className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium text-foreground text-sm">Ofitsiant</span>
-              </>
-            )}
-          </div>
+          {order.orderType === 'dine-in' && order.tableNumber && (
+            <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-border w-full">
+              <MapPin className="w-4 h-4 text-emerald-400" />
+              <span className="font-semibold text-foreground">Stol #{order.tableNumber}</span>
+            </div>
+          )}
         </div>
+
         <div className="flex justify-between text-sm text-muted-foreground mb-2">
           <span>Mahsulotlar</span>
-          <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)} ta</span>
+          <span>{itemCount} ta</span>
         </div>
         {order.serviceFee > 0 && (
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
@@ -111,33 +137,47 @@ export function OrderConfirmation({ order, onNewOrder, onViewReceipt }: OrderCon
             <span>{formatPrice(order.serviceFee)}</span>
           </div>
         )}
+        <div className="flex justify-between text-sm text-muted-foreground mb-2">
+          <span>To'lov holati</span>
+          <span className={`flex items-center gap-1 font-semibold ${isPaid ? 'text-kiosk-success' : 'text-yellow-400'}`}>
+            <CreditCard className="w-3.5 h-3.5" />
+            {isPaid ? "To'langan" : "To'lanmagan"}
+          </span>
+        </div>
         <div className="flex justify-between text-lg font-semibold">
           <span>To'langan summa</span>
           <span className="text-primary">{formatPrice(order.total)}</span>
         </div>
       </motion.div>
 
-      {/* Actions */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.9 }}
-        className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full max-w-sm"
+        className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 w-full max-w-2xl"
       >
+        <Button
+          onClick={onTrackOrder}
+          className="h-12 md:h-14 text-base md:text-lg rounded-2xl bg-primary hover:bg-primary/90 shadow-button"
+        >
+          <ClipboardList className="w-5 h-5 mr-2" />
+          Buyurtmani kuzatish
+        </Button>
         <Button
           onClick={onViewReceipt}
           variant="outline"
-          className="flex-1 h-12 md:h-14 text-base md:text-lg rounded-2xl border-primary/30 hover:bg-primary/10"
+          className="h-12 md:h-14 text-base md:text-lg rounded-2xl border-primary/30 hover:bg-primary/10"
         >
           <Printer className="w-5 h-5 mr-2" />
-          Chekni ko'rish
+          Chek
         </Button>
         <Button
           onClick={onNewOrder}
-          className="flex-1 h-12 md:h-14 text-base md:text-lg rounded-2xl bg-primary hover:bg-primary/90 shadow-button"
+          variant="secondary"
+          className="h-12 md:h-14 text-base md:text-lg rounded-2xl"
         >
           <Home className="w-5 h-5 mr-2" />
-          Yangi buyurtma
+          Yangi
         </Button>
       </motion.div>
     </motion.div>

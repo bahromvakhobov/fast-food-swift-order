@@ -53,7 +53,7 @@ export const menuItems: MenuItem[] = [
     description: 'Beef patty with melted cheese',
     available: true,
     ingredients: ['Beef patty', 'Cheddar cheese', 'Lettuce', 'Tomato', 'Onion', 'Special sauce', 'Sesame bun'],
-    modelUrl: '/models/burger-demo.glb',
+    modelUrl: '/models/habit_cheeseburger.glb',
   },
   {
     id: 'burger-2',
@@ -64,6 +64,8 @@ export const menuItems: MenuItem[] = [
     description: 'Double patty with crispy bacon',
     available: true,
     ingredients: ['Double beef patty', 'Crispy bacon', 'American cheese', 'Pickles', 'Ketchup', 'Mustard', 'Brioche bun'],
+    modelUrl: '/models/habit_cheeseburger.glb',
+
   },
   {
     id: 'burger-3',

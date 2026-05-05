@@ -21,6 +21,10 @@ export type OrderType = 'dine-in' | 'take-out';
 
 export type ServiceType = 'self-service' | 'waiter-service';
 
+export type OrderStatus = 'new' | 'pending' | 'preparing' | 'ready' | 'served' | 'completed' | 'cancelled';
+
+export type PaymentStatus = 'unpaid' | 'pending' | 'paid' | 'failed';
+
 export interface Order {
   id: string;
   orderNumber: number;
@@ -30,12 +34,15 @@ export interface Order {
   serviceFee: number;
   serviceType: ServiceType;
   createdAt: Date;
-  status: 'pending' | 'preparing' | 'ready' | 'completed';
+  status: OrderStatus;
   orderType: OrderType;
+  tableNumber?: number;
+  paymentMethod?: PaymentMethod;
+  paymentStatus?: PaymentStatus;
 }
 
 export type Language = 'uz' | 'en' | 'ru';
 
-export type PaymentMethod = 'card' | 'nfc' | 'cash';
+export type PaymentMethod = 'card' | 'nfc' | 'cash' | 'click' | 'payme' | 'uzum';
 
-export type Screen = 'intro' | 'menu' | 'checkout' | 'payment' | 'confirmation' | 'receipt';
+export type Screen = 'intro' | 'table-select' | 'menu' | 'checkout' | 'payment' | 'confirmation' | 'receipt' | 'tracking';

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Order } from '@/types/kiosk';
-import { getOrders, updateOrderStatus } from '@/stores/orderStore';
+import { getOrders, subscribeToOrders, updateOrderStatus } from '@/stores/orderStore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,39 +22,71 @@ import {
 import { Clock, Package, CheckCircle2, ChefHat, RefreshCw, UtensilsCrossed, ShoppingBag, User, ConciergeBell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/lib/currency';
+import { CanonicalOrderStatus, normalizeOrderStatus } from '@/lib/orderStatus';
 
-const statusConfig = {
-  pending: { label: 'Kutilmoqda', icon: Clock, color: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' },
+const statusConfig: Record<CanonicalOrderStatus, { label: string; icon: typeof Clock; color: string }> = {
+  new: { label: 'Yangi', icon: Clock, color: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' },
   preparing: { label: 'Tayyorlanmoqda', icon: ChefHat, color: 'bg-blue-500/20 text-blue-500 border-blue-500/30' },
   ready: { label: 'Tayyor', icon: Package, color: 'bg-primary/20 text-primary border-primary/30' },
-  completed: { label: 'Yakunlandi', icon: CheckCircle2, color: 'bg-green-500/20 text-green-500 border-green-500/30' },
+  served: { label: 'Yetkazildi', icon: CheckCircle2, color: 'bg-green-500/20 text-green-500 border-green-500/30' },
 };
 
 export const OrderHistoryTable = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const loadOrders = () => {
-    setOrders(getOrders());
+  const loadOrders = async () => {
+    try {
+      setOrders(await getOrders());
+      setError(null);
+    } catch (loadError) {
+      console.error('Failed to load admin orders:', loadError);
+      setError("Buyurtmalarni yuklab bo'lmadi.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadOrders();
+    const unsubscribe = subscribeToOrders(
+      nextOrders => {
+        setOrders(nextOrders);
+        setLoading(false);
+        setError(null);
+      },
+      subscriptionError => {
+        console.error('Admin order subscription failed:', subscriptionError);
+        setError("Buyurtmalarni yuklab bo'lmadi.");
+        setLoading(false);
+      },
+    );
+
+    return unsubscribe;
   }, []);
 
-  const handleStatusChange = (orderId: string, newStatus: Order['status']) => {
-    updateOrderStatus(orderId, newStatus);
-    loadOrders();
-    toast({
-      title: 'Holat yangilandi',
-      description: `Buyurtma holati ${statusConfig[newStatus].label} ga o'zgartirildi`,
-    });
+  const handleStatusChange = async (orderId: string, newStatus: CanonicalOrderStatus) => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      toast({
+        title: 'Holat yangilandi',
+        description: `Buyurtma holati ${statusConfig[newStatus].label} ga o'zgartirildi`,
+      });
+    } catch (updateError) {
+      console.error('Failed to update admin order status:', updateError);
+      toast({
+        title: 'Holat yangilanmadi',
+        description: "Firebase sozlamalarini tekshiring va qayta urinib ko'ring.",
+        variant: 'destructive',
+      });
+    }
   };
 
   const filteredOrders = statusFilter === 'all' 
     ? orders 
-    : orders.filter(o => o.status === statusFilter);
+    : orders.filter(o => normalizeOrderStatus(o.status) === statusFilter);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('uz-UZ', {
@@ -87,7 +119,7 @@ export const OrderHistoryTable = () => {
               size="sm"
             >
               <config.icon className="w-4 h-4" />
-              {config.label} ({orders.filter(o => o.status === key).length})
+              {config.label} ({orders.filter(o => normalizeOrderStatus(o.status) === key).length})
             </Button>
           ))}
         </div>
@@ -103,7 +135,17 @@ export const OrderHistoryTable = () => {
       </div>
 
       {/* Orders Table */}
-      {filteredOrders.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-12 bg-card border border-border rounded-2xl">
+          <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Buyurtmalar yuklanmoqda...</p>
+        </div>
+      ) : error ? (
+        <div className="text-center py-12 bg-card border border-border rounded-2xl">
+          <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-destructive">{error}</p>
+        </div>
+      ) : filteredOrders.length === 0 ? (
         <div className="text-center py-12 bg-card border border-border rounded-2xl">
           <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">Buyurtmalar topilmadi</p>
@@ -128,7 +170,8 @@ export const OrderHistoryTable = () => {
             </TableHeader>
             <TableBody>
               {filteredOrders.map((order) => {
-                const StatusIcon = statusConfig[order.status].icon;
+                const status = normalizeOrderStatus(order.status);
+                const StatusIcon = statusConfig[status].icon;
                 return (
                   <TableRow key={order.id} className="hover:bg-muted/30">
                     <TableCell className="font-bold text-primary">
@@ -183,16 +226,16 @@ export const OrderHistoryTable = () => {
                     <TableCell>
                       <Badge 
                         variant="outline" 
-                        className={`gap-1 ${statusConfig[order.status].color}`}
+                        className={`gap-1 ${statusConfig[status].color}`}
                       >
                         <StatusIcon className="w-3 h-3" />
-                        {statusConfig[order.status].label}
+                        {statusConfig[status].label}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <Select
-                        value={order.status}
-                        onValueChange={(value) => handleStatusChange(order.id, value as Order['status'])}
+                        value={status}
+                        onValueChange={(value) => handleStatusChange(order.id, value as CanonicalOrderStatus)}
                       >
                         <SelectTrigger className="w-[130px] rounded-xl bg-background border-border">
                           <SelectValue />

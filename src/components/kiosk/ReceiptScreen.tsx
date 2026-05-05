@@ -1,6 +1,6 @@
 import { Order } from '@/types/kiosk';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Printer, UtensilsCrossed, ShoppingBag, User, ConciergeBell } from 'lucide-react';
+import { ArrowLeft, Printer, UtensilsCrossed, ShoppingBag, User, ConciergeBell, MapPin, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/currency';
 
@@ -11,6 +11,8 @@ interface ReceiptScreenProps {
 }
 
 export function ReceiptScreen({ order, onBack, onNewOrder }: ReceiptScreenProps) {
+  const isPaid = order.paymentStatus === 'paid';
+
   const handlePrint = () => {
     window.print();
   };
@@ -44,7 +46,7 @@ export function ReceiptScreen({ order, onBack, onNewOrder }: ReceiptScreenProps)
         >
           {/* Restaurant Header */}
           <div className="text-center mb-6 pb-6 border-b border-dashed border-border">
-            <h2 className="text-xl md:text-2xl font-bold text-primary mb-1">Tasty Kiosk</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-primary mb-1">🍽️ AResto</h2>
             <p className="text-muted-foreground text-sm">Toshkent shahri, Amir Temur ko'chasi</p>
             <p className="text-muted-foreground text-sm">Tel: +998 71 123-45-67</p>
           </div>
@@ -87,6 +89,22 @@ export function ReceiptScreen({ order, onBack, onNewOrder }: ReceiptScreenProps)
                     Ofitsiant xizmati
                   </>
                 )}
+              </span>
+            </div>
+            {order.orderType === 'dine-in' && order.tableNumber && (
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-muted-foreground">Stol</span>
+                <span className="flex items-center gap-1 font-medium text-emerald-400">
+                  <MapPin className="w-3 h-3" />
+                  #{order.tableNumber}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground">To'lov holati</span>
+              <span className={`flex items-center gap-1 font-medium ${isPaid ? 'text-kiosk-success' : 'text-yellow-400'}`}>
+                <CreditCard className="w-3 h-3" />
+                {isPaid ? "To'langan" : "To'lanmagan"}
               </span>
             </div>
             <div className="flex justify-between text-sm">

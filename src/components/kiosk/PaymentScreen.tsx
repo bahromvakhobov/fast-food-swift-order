@@ -1,8 +1,22 @@
-import { CartItem, PaymentMethod, OrderType, ServiceType } from '@/types/kiosk';
+import { useMemo, useState } from 'react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { motion } from 'framer-motion';
-import { CreditCard, Smartphone, Banknote, ArrowLeft, Check, UtensilsCrossed, ShoppingBag, User, ConciergeBell } from 'lucide-react';
+import {
+  ArrowLeft,
+  Banknote,
+  Check,
+  ConciergeBell,
+  CreditCard,
+  MapPin,
+  QrCode,
+  ShoppingBag,
+  Smartphone,
+  UtensilsCrossed,
+  User,
+  WalletCards,
+} from 'lucide-react';
+import { CartItem, PaymentMethod, OrderType, ServiceType } from '@/types/kiosk';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
 import { formatPrice } from '@/lib/currency';
 
 interface PaymentScreenProps {
@@ -10,37 +24,73 @@ interface PaymentScreenProps {
   subtotal: number;
   serviceFee: number;
   total: number;
+  orderNumber: number;
   orderType: OrderType;
   serviceType: ServiceType;
+  tableNumber?: number | null;
   onBack: () => void;
-  onPaymentComplete: (method: PaymentMethod) => void;
+  onPaymentComplete: (method: PaymentMethod) => void | Promise<void>;
 }
 
-export function PaymentScreen({ 
-  items, 
-  subtotal, 
-  serviceFee, 
-  total, 
-  orderType, 
-  serviceType, 
-  onBack, 
-  onPaymentComplete 
+const qrMethods: PaymentMethod[] = ['click', 'payme', 'uzum'];
+
+const paymentMethodLabels: Record<PaymentMethod, string> = {
+  card: 'Karta',
+  nfc: 'NFC',
+  cash: 'Naqd pul',
+  click: 'Click',
+  payme: 'Payme',
+  uzum: 'Uzum',
+};
+
+export function PaymentScreen({
+  items,
+  subtotal,
+  serviceFee,
+  total,
+  orderNumber,
+  orderType,
+  serviceType,
+  tableNumber,
+  onBack,
+  onPaymentComplete,
 }: PaymentScreenProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [processing, setProcessing] = useState(false);
 
+  const isQrMethod = selectedMethod ? qrMethods.includes(selectedMethod) : false;
+  const safeOrderNumber = orderNumber || Math.floor(100 + Math.random() * 900);
+
+  const qrData = useMemo(() => {
+    if (!selectedMethod || !isQrMethod) return '';
+
+    return JSON.stringify({
+      restaurant: 'AResto',
+      orderNumber: safeOrderNumber,
+      tableNumber: orderType === 'dine-in' ? tableNumber ?? null : null,
+      amount: formatPrice(total),
+      method: paymentMethodLabels[selectedMethod],
+    });
+  }, [isQrMethod, orderType, safeOrderNumber, selectedMethod, tableNumber, total]);
+
   const handlePayment = async () => {
     if (!selectedMethod) return;
     setProcessing(true);
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    onPaymentComplete(selectedMethod);
+    try {
+      await new Promise(resolve => setTimeout(resolve, isQrMethod ? 800 : 2000));
+      await onPaymentComplete(selectedMethod);
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const paymentMethods = [
     { id: 'card' as PaymentMethod, icon: CreditCard, label: 'Karta', description: 'Kredit yoki debit karta' },
     { id: 'nfc' as PaymentMethod, icon: Smartphone, label: 'NFC', description: "Telefon yoki karta bilan to'lang" },
     { id: 'cash' as PaymentMethod, icon: Banknote, label: 'Naqd pul', description: "Kassada to'lang" },
+    { id: 'click' as PaymentMethod, icon: QrCode, label: 'Click', description: "Click orqali QR to'lov" },
+    { id: 'payme' as PaymentMethod, icon: WalletCards, label: 'Payme', description: "Payme orqali QR to'lov" },
+    { id: 'uzum' as PaymentMethod, icon: QrCode, label: 'Uzum', description: "Uzum orqali QR to'lov" },
   ];
 
   return (
@@ -50,7 +100,6 @@ export function PaymentScreen({
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-background z-50 flex flex-col"
     >
-      {/* Header */}
       <header className="flex items-center gap-4 p-4 md:p-6 border-b border-border">
         <Button
           variant="ghost"
@@ -60,15 +109,33 @@ export function PaymentScreen({
         >
           <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
         </Button>
-        <h1 className="text-xl md:text-2xl font-bold text-foreground">To'lov</h1>
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">To'lov</h1>
+          <p className="text-sm text-muted-foreground">Order #{safeOrderNumber}</p>
+        </div>
       </header>
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-auto">
-        {/* Order Summary */}
         <div className="lg:w-1/3 p-4 md:p-6 border-b lg:border-b-0 lg:border-r border-border">
           <h2 className="text-lg font-semibold text-foreground mb-4">Buyurtma tafsilotlari</h2>
-          
-          {/* Order Type & Service Type Badges */}
+
+          <div className="mb-4 rounded-2xl bg-card border border-border p-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Buyurtma #</span>
+              <span className="font-bold text-primary">{safeOrderNumber}</span>
+            </div>
+            <div className="flex justify-between text-sm mt-2">
+              <span className="text-muted-foreground">Jami summa</span>
+              <span className="font-bold text-foreground">{formatPrice(total)}</span>
+            </div>
+            {orderType === 'dine-in' && tableNumber && (
+              <div className="flex justify-between text-sm mt-2">
+                <span className="text-muted-foreground">Stol</span>
+                <span className="font-bold text-emerald-400">#{tableNumber}</span>
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-2 mb-4">
             <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 text-primary">
               {orderType === 'dine-in' ? (
@@ -96,8 +163,14 @@ export function PaymentScreen({
                 </>
               )}
             </div>
+            {orderType === 'dine-in' && tableNumber && (
+              <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                <MapPin className="w-4 h-4" />
+                <span className="font-medium text-sm">Stol #{tableNumber}</span>
+              </div>
+            )}
           </div>
-          
+
           <div className="space-y-3 mb-6 max-h-40 lg:max-h-none overflow-auto">
             {items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
@@ -128,21 +201,20 @@ export function PaymentScreen({
           </div>
         </div>
 
-        {/* Payment Methods */}
         <div className="flex-1 p-4 md:p-6">
           <h2 className="text-lg font-semibold text-foreground mb-4 md:mb-6">To'lov usulini tanlang</h2>
-          <div className="grid gap-3 md:gap-4 max-w-md mx-auto">
+          <div className="grid gap-3 md:gap-4 max-w-2xl mx-auto md:grid-cols-2">
             {paymentMethods.map((method, index) => (
               <motion.button
                 key={method.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.05 }}
                 onClick={() => setSelectedMethod(method.id)}
                 className={`
-                  relative flex items-center gap-3 md:gap-4 p-4 md:p-6 rounded-2xl border-2 transition-all duration-300 touch-manipulation
-                  ${selectedMethod === method.id 
-                    ? 'border-primary bg-primary/10' 
+                  relative flex items-center gap-3 md:gap-4 p-4 md:p-5 rounded-2xl border-2 transition-all duration-300 touch-manipulation
+                  ${selectedMethod === method.id
+                    ? 'border-primary bg-primary/10'
                     : 'border-border hover:border-primary/50 bg-card'
                   }
                 `}
@@ -170,7 +242,40 @@ export function PaymentScreen({
             ))}
           </div>
 
-          {/* Pay Button */}
+          {isQrMethod && selectedMethod && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 max-w-md mx-auto rounded-3xl bg-card border border-border p-5 md:p-6 text-center shadow-card"
+            >
+              <div className="mx-auto mb-4 w-fit rounded-2xl bg-white p-4">
+                <QRCodeCanvas value={qrData} size={220} level="M" includeMargin />
+              </div>
+              <h3 className="text-xl font-bold text-foreground">
+                {paymentMethodLabels[selectedMethod]} QR
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Demo QR kod. Haqiqiy to'lov API ulanmagan.
+              </p>
+              <div className="mt-4 rounded-2xl bg-secondary/40 p-3 text-left text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Order</span>
+                  <span className="text-foreground font-semibold">#{safeOrderNumber}</span>
+                </div>
+                <div className="flex justify-between mt-2">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="text-primary font-semibold">{formatPrice(total)}</span>
+                </div>
+                {orderType === 'dine-in' && tableNumber && (
+                  <div className="flex justify-between mt-2">
+                    <span className="text-muted-foreground">Table</span>
+                    <span className="text-emerald-400 font-semibold">#{tableNumber}</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
           <div className="mt-6 md:mt-8 max-w-md mx-auto">
             <Button
               onClick={handlePayment}
@@ -180,9 +285,11 @@ export function PaymentScreen({
               {processing ? (
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
                   className="w-6 h-6 border-3 border-primary-foreground border-t-transparent rounded-full"
                 />
+              ) : isQrMethod ? (
+                'Simulate Payment Success'
               ) : (
                 `To'lash ${formatPrice(total)}`
               )}

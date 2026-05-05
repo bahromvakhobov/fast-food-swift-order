@@ -1,48 +1,40 @@
 import { Order } from '@/types/kiosk';
+import {
+  createOrder,
+  getOrders as getFirestoreOrders,
+  subscribeToOrder,
+  subscribeToOrders,
+  updateOrderStatus as updateFirestoreOrderStatus,
+  updatePaymentStatus,
+} from '@/services/orderService';
 
-// Simple in-memory store for orders (persisted to localStorage)
-const STORAGE_KEY = 'kiosk-orders';
-
-export const getOrders = (): Order[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const orders = JSON.parse(stored);
-      return orders.map((order: Order) => ({
-        ...order,
-        createdAt: new Date(order.createdAt),
-        // Ensure backwards compatibility with old orders
-        subtotal: order.subtotal ?? order.total,
-        serviceFee: order.serviceFee ?? 0,
-        serviceType: order.serviceType ?? 'self-service',
-      }));
-    }
-  } catch (e) {
-    console.error('Failed to load orders:', e);
-  }
-  return [];
+export const getOrders = async (): Promise<Order[]> => {
+  return getFirestoreOrders();
 };
 
-export const saveOrder = (order: Order): void => {
-  try {
-    const orders = getOrders();
-    orders.unshift(order);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
-  } catch (e) {
-    console.error('Failed to save order:', e);
-  }
+export const getOrderById = async (orderId: string): Promise<Order | null> => {
+  const orders = await getFirestoreOrders();
+  return orders.find(order => order.id === orderId) ?? null;
 };
 
-export const updateOrderStatus = (orderId: string, status: Order['status']): void => {
-  try {
-    const orders = getOrders();
-    const updated = orders.map(o => o.id === orderId ? { ...o, status } : o);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  } catch (e) {
-    console.error('Failed to update order:', e);
-  }
+export const saveOrder = async (order: Order): Promise<Order> => {
+  return createOrder(order);
+};
+
+export const updateOrderStatus = async (orderId: string, status: Order['status']): Promise<void> => {
+  return updateFirestoreOrderStatus(orderId, status);
+};
+
+export const updateOrderPaymentStatus = async (
+  orderId: string,
+  paymentStatus: Order['paymentStatus'],
+): Promise<void> => {
+  if (!paymentStatus) return;
+  return updatePaymentStatus(orderId, paymentStatus);
 };
 
 export const clearOrders = (): void => {
-  localStorage.removeItem(STORAGE_KEY);
+  console.warn('clearOrders is not supported for Firestore-backed orders.');
 };
+
+export { subscribeToOrder, subscribeToOrders };

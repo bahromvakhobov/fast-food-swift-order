@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Category, CartItem, MenuItem, Language, Screen, Order, PaymentMethod, OrderType, ServiceType } from '@/types/kiosk';
-import { saveOrder } from '@/stores/orderStore';
+import { saveOrder, updateOrderPaymentStatus } from '@/stores/orderStore';
 import { menuItems } from '@/data/menuData';
 import { CategorySidebar } from '@/components/kiosk/CategorySidebar';
 import { KioskHeader } from '@/components/kiosk/KioskHeader';
@@ -10,9 +10,13 @@ import { MobileCartDrawer } from '@/components/kiosk/MobileCartDrawer';
 import { PaymentScreen } from '@/components/kiosk/PaymentScreen';
 import { OrderConfirmation } from '@/components/kiosk/OrderConfirmation';
 import { ReceiptScreen } from '@/components/kiosk/ReceiptScreen';
+import { OrderTrackingScreen } from '@/components/kiosk/OrderTrackingScreen';
 import { IntroScreen } from '@/components/kiosk/IntroScreen';
 import { FoodDetailModal } from '@/components/kiosk/FoodDetailModal';
+import { TableNumberScreen } from '@/components/kiosk/TableNumberScreen';
 import { AnimatePresence, motion } from 'framer-motion';
+import { getOrderById } from '@/stores/orderStore';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState<Category>('tacos');
@@ -23,6 +27,12 @@ const Index = () => {
   const [serviceType, setServiceType] = useState<ServiceType>('self-service');
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [pendingOrderNumber, setPendingOrderNumber] = useState<number | null>(null);
+  const { toast } = useToast();
+  const [tableNumber, setTableNumber] = useState<number | null>(() => {
+    const saved = localStorage.getItem('aresto-table-number');
+    return saved ? parseInt(saved, 10) : null;
+  });
 
   const filteredItems = menuItems.filter(item => item.category === activeCategory);
 
@@ -51,31 +61,49 @@ const Index = () => {
 
   const handleCheckout = useCallback(() => {
     if (cart.length === 0) return;
+    setPendingOrderNumber(prev => prev ?? Math.floor(100 + Math.random() * 900));
     setScreen('payment');
   }, [cart.length]);
 
-  const handlePaymentComplete = useCallback((method: PaymentMethod) => {
+  const handlePaymentComplete = useCallback(async (method: PaymentMethod) => {
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const serviceFee = serviceType === 'waiter-service' ? subtotal * 0.10 : 0;
     const total = subtotal + serviceFee;
+    const orderNumber = pendingOrderNumber ?? Math.floor(100 + Math.random() * 900);
+    const paymentStatus = method === 'cash' ? 'unpaid' : 'paid';
     
     const order: Order = {
-      id: `order-${Date.now()}`,
-      orderNumber: Math.floor(100 + Math.random() * 900),
+      id: '',
+      orderNumber,
       items: [...cart],
       subtotal,
       serviceFee,
       total,
       serviceType,
       createdAt: new Date(),
-      status: 'pending',
+      status: 'new',
       orderType,
+      paymentMethod: method,
+      paymentStatus,
+      ...(orderType === 'dine-in' && tableNumber ? { tableNumber } : {}),
     };
-    saveOrder(order);
-    setCurrentOrder(order);
-    setCart([]);
-    setScreen('confirmation');
-  }, [cart, orderType, serviceType]);
+    try {
+      const savedOrder = await saveOrder(order);
+      await updateOrderPaymentStatus(savedOrder.id, paymentStatus);
+      setCurrentOrder({ ...savedOrder, paymentStatus });
+      setCart([]);
+      setPendingOrderNumber(null);
+      setScreen('confirmation');
+    } catch (error) {
+      console.error('Failed to create order:', error);
+      toast({
+        title: 'Buyurtma saqlanmadi',
+        description: "Firebase sozlamalarini tekshiring va qayta urinib ko'ring.",
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  }, [cart, orderType, pendingOrderNumber, serviceType, tableNumber, toast]);
 
   const handleNewOrder = useCallback(() => {
     setCart([]);
@@ -83,16 +111,37 @@ const Index = () => {
     setScreen('intro');
     setActiveCategory('tacos');
     setServiceType('self-service');
+    setPendingOrderNumber(null);
+    setTableNumber(null);
+    localStorage.removeItem('aresto-table-number');
   }, []);
 
   const handleSelectOrderType = useCallback((type: OrderType) => {
     setOrderType(type);
+    if (type === 'dine-in') {
+      setScreen('table-select');
+    } else {
+      setTableNumber(null);
+      localStorage.removeItem('aresto-table-number');
+      setScreen('menu');
+    }
+  }, []);
+
+  const handleTableNumberConfirm = useCallback((num: number) => {
+    setTableNumber(num);
     setScreen('menu');
   }, []);
 
   const handleViewReceipt = useCallback(() => {
     setScreen('receipt');
   }, []);
+
+  const handleTrackOrder = useCallback(async () => {
+    if (currentOrder) {
+      setCurrentOrder(await getOrderById(currentOrder.id) ?? currentOrder);
+    }
+    setScreen('tracking');
+  }, [currentOrder]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const serviceFee = serviceType === 'waiter-service' ? subtotal * 0.10 : 0;
@@ -109,6 +158,14 @@ const Index = () => {
           />
         )}
 
+        {screen === 'table-select' && (
+          <TableNumberScreen
+            language={language}
+            onConfirm={handleTableNumberConfirm}
+            onBack={() => setScreen('intro')}
+          />
+        )}
+
         {screen === 'payment' && (
           <PaymentScreen
             items={cart}
@@ -117,6 +174,8 @@ const Index = () => {
             total={total}
             orderType={orderType}
             serviceType={serviceType}
+            tableNumber={tableNumber}
+            orderNumber={pendingOrderNumber ?? 0}
             onBack={() => setScreen('menu')}
             onPaymentComplete={handlePaymentComplete}
           />
@@ -127,6 +186,18 @@ const Index = () => {
             order={currentOrder}
             onNewOrder={handleNewOrder}
             onViewReceipt={handleViewReceipt}
+            onTrackOrder={handleTrackOrder}
+          />
+        )}
+
+        {screen === 'tracking' && currentOrder && (
+          <OrderTrackingScreen
+            order={currentOrder}
+            onBack={() => {
+              getOrderById(currentOrder.id).then(order => setCurrentOrder(order ?? currentOrder));
+              setScreen('confirmation');
+            }}
+            onNewOrder={handleNewOrder}
           />
         )}
 
