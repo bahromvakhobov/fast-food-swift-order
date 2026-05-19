@@ -1,7 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Category, CartItem, MenuItem, Language, Screen, Order, PaymentMethod, OrderType, ServiceType } from '@/types/kiosk';
 import { saveOrder, updateOrderPaymentStatus } from '@/stores/orderStore';
-import { menuItems } from '@/data/menuData';
+import { menuItems as fallbackMenuItems, categories as fallbackCategories } from '@/data/menuData';
+import { subscribeToFoods } from '@/services/foodService';
+import { subscribeToCategories } from '@/services/categoryService';
+import { markTableOccupied } from '@/services/tableService';
 import { CategorySidebar } from '@/components/kiosk/CategorySidebar';
 import { KioskHeader } from '@/components/kiosk/KioskHeader';
 import { FoodItemCard } from '@/components/kiosk/FoodItemCard';
@@ -28,13 +31,73 @@ const Index = () => {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [pendingOrderNumber, setPendingOrderNumber] = useState<number | null>(null);
-  const { toast } = useToast();
   const [tableNumber, setTableNumber] = useState<number | null>(() => {
     const saved = localStorage.getItem('aresto-table-number');
-    return saved ? parseInt(saved, 10) : null;
+    return saved ? Number(saved) : null;
   });
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(fallbackMenuItems);
+  const [categories, setCategories] = useState(fallbackCategories);
+  const [usingLocalMenu, setUsingLocalMenu] = useState(false);
+  const [usingLocalCategories, setUsingLocalCategories] = useState(false);
+  const [menuLoading, setMenuLoading] = useState(true);
+  const [menuError, setMenuError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const filteredItems = menuItems.filter(item => item.category === activeCategory);
+
+  useEffect(() => {
+    const unsubscribeFoods = subscribeToFoods(
+      nextFoods => {
+        if (nextFoods.length > 0) {
+          setMenuItems(nextFoods);
+          setUsingLocalMenu(false);
+        } else {
+          setMenuItems(fallbackMenuItems);
+          setUsingLocalMenu(true);
+        }
+        setMenuLoading(false);
+        setMenuError(null);
+      },
+      subscriptionError => {
+        console.error('Menu subscription failed:', subscriptionError);
+        setMenuItems(fallbackMenuItems);
+        setUsingLocalMenu(true);
+        setMenuError("Menyu yuklanmadi. Keshdan foydalanilmoqda.");
+        setMenuLoading(false);
+      },
+    );
+
+    const unsubscribeCategories = subscribeToCategories(
+      nextCategories => {
+        if (nextCategories.length > 0) {
+          setCategories(nextCategories.map(cat => ({ id: cat.id, name: cat.name, icon: cat.icon })));
+          setUsingLocalCategories(false);
+        } else {
+          setCategories(fallbackCategories);
+          setUsingLocalCategories(true);
+        }
+      },
+      subscriptionError => {
+        console.error('Categories subscription failed:', subscriptionError);
+        setCategories(fallbackCategories);
+        setUsingLocalCategories(true);
+      },
+    );
+
+    return () => {
+      unsubscribeFoods();
+      unsubscribeCategories();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (tableNumber !== null) {
+      localStorage.setItem('aresto-table-number', String(tableNumber));
+    } else {
+      localStorage.removeItem('aresto-table-number');
+    }
+  }, [tableNumber]);
 
   const addToCart = useCallback((item: MenuItem) => {
     setCart(prev => {
@@ -66,42 +129,83 @@ const Index = () => {
   }, [cart.length]);
 
   const handlePaymentComplete = useCallback(async (method: PaymentMethod) => {
+    if (orderType === 'dine-in' && !tableNumber) {
+      toast({
+        title: 'Stol raqami kerak',
+        description: 'Dine-in buyurtma uchun stol raqamini kiriting.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (cart.length === 0) {
+      toast({
+        title: 'Savat bo‘sh',
+        description: 'Iltimos, avval mahsulot tanlang.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCreatingOrder(true);
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const serviceFee = serviceType === 'waiter-service' ? subtotal * 0.10 : 0;
     const total = subtotal + serviceFee;
     const orderNumber = pendingOrderNumber ?? Math.floor(100 + Math.random() * 900);
     const paymentStatus = method === 'cash' ? 'unpaid' : 'paid';
-    
+
     const order: Order = {
-      id: '',
+      id: currentOrder?.id ?? '',
       orderNumber,
-      items: [...cart],
+      items: cart.map(item => ({
+        ...item,
+        quantity: Number(item.quantity ?? 1),
+      })),
       subtotal,
       serviceFee,
       total,
       serviceType,
-      createdAt: new Date(),
+      createdAt: currentOrder?.createdAt ?? new Date(),
       status: 'new',
       orderType,
       paymentMethod: method,
       paymentStatus,
       ...(orderType === 'dine-in' && tableNumber ? { tableNumber } : {}),
     };
+
     try {
-      const savedOrder = await saveOrder(order);
-      await updateOrderPaymentStatus(savedOrder.id, paymentStatus);
-      setCurrentOrder({ ...savedOrder, paymentStatus });
+      let savedOrder: Order;
+      if (currentOrder?.id && currentOrder.orderNumber === orderNumber) {
+        await updateOrderPaymentStatus(currentOrder.id, paymentStatus);
+        savedOrder = { ...currentOrder, paymentStatus };
+      } else {
+        savedOrder = await saveOrder(order);
+      }
+
+      setCurrentOrder(savedOrder);
       setCart([]);
       setPendingOrderNumber(null);
       setScreen('confirmation');
+
+      // Mark table as occupied if dine-in
+      if (orderType === 'dine-in' && tableNumber) {
+        try {
+          await markTableOccupied(tableNumber, savedOrder.id);
+        } catch (tableError) {
+          console.error('Failed to mark table occupied:', tableError);
+          // Don't fail the order creation for table marking
+        }
+      }
     } catch (error) {
       console.error('Failed to create order:', error);
       toast({
         title: 'Buyurtma saqlanmadi',
-        description: "Firebase sozlamalarini tekshiring va qayta urinib ko'ring.",
+        description: error instanceof Error ? error.message : "Firebase sozlamalarini tekshiring va qayta urinib ko'ring.",
         variant: 'destructive',
       });
       throw error;
+    } finally {
+      setCreatingOrder(false);
     }
   }, [cart, orderType, pendingOrderNumber, serviceType, tableNumber, toast]);
 
@@ -178,6 +282,7 @@ const Index = () => {
             orderNumber={pendingOrderNumber ?? 0}
             onBack={() => setScreen('menu')}
             onPaymentComplete={handlePaymentComplete}
+            loading={creatingOrder}
           />
         )}
 
@@ -212,10 +317,25 @@ const Index = () => {
 
       {screen === 'menu' && (
         <>
+          {(usingLocalMenu || usingLocalCategories || menuError) && (
+            <div className="w-full p-4 md:p-5 mx-auto mb-4 rounded-3xl bg-secondary/40 border border-border text-sm text-foreground max-w-7xl">
+              {menuError ? (
+                <p>{menuError}</p>
+              ) : (
+                <p>
+                  {usingLocalMenu ? 'Firestore menyu bo‘sh. Lokal demo menyu ishlatilmoqda.' : ''}
+                  {usingLocalMenu && usingLocalCategories ? ' ' : ''}
+                  {usingLocalCategories ? 'Kategoriyalar Firestore-dan olinmadi. Lokal demo kategoriyalar ishlatilmoqda.' : ''}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Category Sidebar */}
           <CategorySidebar
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
+            categories={categories}
           />
 
           {/* Main Content */}

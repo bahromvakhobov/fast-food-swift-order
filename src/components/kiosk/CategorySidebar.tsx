@@ -1,20 +1,34 @@
 import { Category } from '@/types/kiosk';
-import { categories } from '@/data/menuData';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+
+interface CategoryItem {
+  id: string;
+  name: string;
+  icon: string;
+}
 
 interface CategorySidebarProps {
   activeCategory: Category;
   onCategoryChange: (category: Category) => void;
+  categories?: CategoryItem[];
 }
 
-export function CategorySidebar({ activeCategory, onCategoryChange }: CategorySidebarProps) {
+export function CategorySidebar({ activeCategory, onCategoryChange, categories: propCategories }: CategorySidebarProps) {
+  const displayCategories = propCategories || [
+    { id: 'tacos', name: 'Tacos', icon: '🌮' },
+    { id: 'burgers', name: 'Burgers', icon: '🍔' },
+    { id: 'crepes', name: 'Crepes', icon: '🥞' },
+    { id: 'drinks', name: 'Drinks', icon: '🥤' },
+    { id: 'desserts', name: 'Desserts', icon: '🍰' },
+    { id: 'chicken', name: 'Chicken', icon: '🍗' },
+  ];
   return (
     <>
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-28 min-h-screen bg-secondary/50 backdrop-blur-sm border-r border-border flex-col py-6">
         <div className="flex flex-col gap-2 px-2">
-          {categories.map((category, index) => {
+          {displayCategories.map((category, index) => {
             const isActive = activeCategory === category.id;
             
             return (
@@ -53,7 +67,7 @@ export function CategorySidebar({ activeCategory, onCategoryChange }: CategorySi
       {/* Mobile Horizontal Scroll */}
       <div className="md:hidden sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="flex gap-2 p-3 overflow-x-auto scrollbar-hide">
-          {categories.map((category) => {
+          {displayCategories.map((category) => {
             const isActive = activeCategory === category.id;
             
             return (

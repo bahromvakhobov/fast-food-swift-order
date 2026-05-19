@@ -4,6 +4,7 @@ import { UtensilsCrossed } from 'lucide-react';
 import KitchenHeader from '@/components/kitchen/KitchenHeader';
 import KitchenOrderCard from '@/components/kitchen/KitchenOrderCard';
 import { subscribeToOrders, updateOrderStatus } from '@/stores/orderStore';
+import { markTableAvailable } from '@/services/tableService';
 import { Order } from '@/types/kiosk';
 import { CanonicalOrderStatus, normalizeOrderStatus, orderStatusLabelsUz } from '@/lib/orderStatus';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,18 @@ const Kitchen = () => {
   const handleStatusChange = async (orderId: string, status: CanonicalOrderStatus) => {
     try {
       await updateOrderStatus(orderId, status);
+
+      // Mark table as available when order is served
+      if (status === 'served') {
+        const order = orders.find(o => o.id === orderId);
+        if (order?.orderType === 'dine-in' && order.tableNumber) {
+          try {
+            await markTableAvailable(order.tableNumber);
+          } catch (tableError) {
+            console.error('Failed to mark table available:', tableError);
+          }
+        }
+      }
     } catch (updateError) {
       console.error('Failed to update order status:', updateError);
       setError("Buyurtma holatini yangilab bo'lmadi.");

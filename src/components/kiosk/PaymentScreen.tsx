@@ -30,6 +30,7 @@ interface PaymentScreenProps {
   tableNumber?: number | null;
   onBack: () => void;
   onPaymentComplete: (method: PaymentMethod) => void | Promise<void>;
+  loading?: boolean;
 }
 
 const qrMethods: PaymentMethod[] = ['click', 'payme', 'uzum'];
@@ -54,6 +55,7 @@ export function PaymentScreen({
   tableNumber,
   onBack,
   onPaymentComplete,
+  loading = false,
 }: PaymentScreenProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -105,6 +107,7 @@ export function PaymentScreen({
           variant="ghost"
           size="icon"
           onClick={onBack}
+          disabled={loading}
           className="rounded-full w-10 h-10 md:w-12 md:h-12"
         >
           <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
@@ -210,7 +213,7 @@ export function PaymentScreen({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                onClick={() => setSelectedMethod(method.id)}
+                onClick={() => !loading && setSelectedMethod(method.id)}
                 className={`
                   relative flex items-center gap-3 md:gap-4 p-4 md:p-5 rounded-2xl border-2 transition-all duration-300 touch-manipulation
                   ${selectedMethod === method.id
@@ -279,7 +282,7 @@ export function PaymentScreen({
           <div className="mt-6 md:mt-8 max-w-md mx-auto">
             <Button
               onClick={handlePayment}
-              disabled={!selectedMethod || processing}
+              disabled={!selectedMethod || processing || loading}
               className="w-full h-14 md:h-16 text-lg md:text-xl font-semibold rounded-2xl bg-primary hover:bg-primary/90 shadow-button disabled:opacity-50"
             >
               {processing ? (

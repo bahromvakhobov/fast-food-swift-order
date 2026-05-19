@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Delete, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Language } from '@/types/kiosk';
+import { subscribeToTables, getTables } from '@/services/tableService';
+import { RestaurantTable } from '@/services/tableService';
 
 interface TableNumberScreenProps {
   language: Language;
@@ -10,39 +12,63 @@ interface TableNumberScreenProps {
   onBack: () => void;
 }
 
-const translations = {
-  title: {
-    uz: "Stol raqamini kiriting",
-    en: "Enter Table Number",
-    ru: "Введите номер стола",
-  },
-  subtitle: {
-    uz: "Stol raqamingizni tanlang (1–50)",
-    en: "Select your table number (1–50)",
-    ru: "Выберите номер вашего стола (1–50)",
-  },
-  table: {
-    uz: "Stol",
-    en: "Table",
-    ru: "Стол",
-  },
-  confirm: {
-    uz: "Davom etish",
-    en: "Continue",
-    ru: "Продолжить",
-  },
-  back: {
-    uz: "Orqaga",
-    en: "Back",
-    ru: "Назад",
-  },
-};
-
 export function TableNumberScreen({ language, onConfirm, onBack }: TableNumberScreenProps) {
   const [input, setInput] = useState('');
+  const [tables, setTables] = useState<RestaurantTable[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToTables(
+      nextTables => {
+        setTables(nextTables);
+        setLoading(false);
+      },
+      error => {
+        console.error('Table subscription failed:', error);
+        setTables([]);
+        setLoading(false);
+      },
+    );
+
+    return unsubscribe;
+  }, []);
+
+  const availableTables = tables.length > 0 ? tables.filter(t => t.active && t.status === 'available') : [];
+  const maxTableNumber = tables.length > 0 ? Math.max(...tables.map(t => t.number)) : 50;
+  const minTableNumber = tables.length > 0 ? Math.min(...tables.map(t => t.number)) : 1;
+
+  const translations = {
+    title: {
+      uz: "Stol raqamini kiriting",
+      en: "Enter Table Number",
+      ru: "Введите номер стола",
+    },
+    subtitle: {
+      uz: `Stol raqamingizni tanlang (${minTableNumber}–${maxTableNumber})`,
+      en: `Select your table number (${minTableNumber}–${maxTableNumber})`,
+      ru: `Выберите номер вашего стола (${minTableNumber}–${maxTableNumber})`,
+    },
+    table: {
+      uz: "Stol",
+      en: "Table",
+      ru: "Стол",
+    },
+    confirm: {
+      uz: "Davom etish",
+      en: "Continue",
+      ru: "Продолжить",
+    },
+    back: {
+      uz: "Orqaga",
+      en: "Back",
+      ru: "Назад",
+    },
+  };
 
   const tableNumber = parseInt(input, 10);
-  const isValid = !isNaN(tableNumber) && tableNumber >= 1 && tableNumber <= 50;
+  const isValidTable = tables.length > 0
+    ? availableTables.some(t => t.number === tableNumber)
+    : !isNaN(tableNumber) && tableNumber >= minTableNumber && tableNumber <= maxTableNumber;
 
   const handleDigit = (digit: string) => {
     if (input.length < 2) {
@@ -55,7 +81,7 @@ export function TableNumberScreen({ language, onConfirm, onBack }: TableNumberSc
   };
 
   const handleConfirm = () => {
-    if (isValid) {
+    if (isValidTable) {
       localStorage.setItem('aresto-table-number', tableNumber.toString());
       onConfirm(tableNumber);
     }
@@ -173,7 +199,7 @@ export function TableNumberScreen({ language, onConfirm, onBack }: TableNumberSc
       >
         <Button
           onClick={handleConfirm}
-          disabled={!isValid}
+          disabled={!isValidTable}
           className="w-full h-16 md:h-18 text-xl md:text-2xl font-bold rounded-2xl bg-primary hover:bg-primary/90 shadow-button disabled:opacity-40 disabled:shadow-none transition-all"
         >
           {translations.confirm[language]}

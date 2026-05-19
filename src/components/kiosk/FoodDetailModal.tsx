@@ -98,7 +98,9 @@ export function FoodDetailModal({ item, isOpen, onClose, onAddToCart }: FoodDeta
                     alt={`${item.name} 3D model`}
                     ar
                     ar-modes="webxr scene-viewer quick-look"
+                    ar-placement="floor"
                     ar-scale="fixed"
+                    scale="0.18 0.18 0.18"
                     auto-rotate
                     camera-controls
                     touch-action="pan-y"

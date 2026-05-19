@@ -1,6 +1,7 @@
 import { Order } from '@/types/kiosk';
 import {
   createOrder,
+  getOrderById as getFirestoreOrderById,
   getOrders as getFirestoreOrders,
   subscribeToOrder,
   subscribeToOrders,
@@ -13,8 +14,7 @@ export const getOrders = async (): Promise<Order[]> => {
 };
 
 export const getOrderById = async (orderId: string): Promise<Order | null> => {
-  const orders = await getFirestoreOrders();
-  return orders.find(order => order.id === orderId) ?? null;
+  return getFirestoreOrderById(orderId);
 };
 
 export const saveOrder = async (order: Order): Promise<Order> => {

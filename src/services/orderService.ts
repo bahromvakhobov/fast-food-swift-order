@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -12,6 +13,7 @@ import {
 import { db } from '@/lib/firebase';
 import { Order, OrderStatus, PaymentStatus } from '@/types/kiosk';
 import { normalizeOrderStatus } from '@/lib/orderStatus';
+import { removeUndefinedDeep } from '@/lib/firestoreUtils';
 
 const ORDERS_COLLECTION = 'orders';
 
@@ -28,12 +30,6 @@ const toDate = (value: unknown): Date => {
   return new Date();
 };
 
-const removeUndefined = <T extends Record<string, unknown>>(value: T): T => {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, entryValue]) => entryValue !== undefined),
-  ) as T;
-};
-
 const normalizePaymentStatus = (paymentStatus?: PaymentStatus): PaymentStatus => {
   return paymentStatus ?? 'unpaid';
 };
@@ -42,7 +38,7 @@ const normalizeOrderForFirestore = (orderData: OrderInput): FirestoreOrderData =
   const now = new Date();
   const createdAt = orderData.createdAt ? toDate(orderData.createdAt) : now;
 
-  return removeUndefined({
+  const normalizedOrder = {
     orderNumber: orderData.orderNumber,
     items: orderData.items,
     subtotal: orderData.subtotal ?? orderData.total,
@@ -56,7 +52,9 @@ const normalizeOrderForFirestore = (orderData: OrderInput): FirestoreOrderData =
     tableNumber: orderData.orderType === 'dine-in' ? orderData.tableNumber : undefined,
     paymentMethod: orderData.paymentMethod,
     paymentStatus: normalizePaymentStatus(orderData.paymentStatus),
-  });
+  };
+
+  return removeUndefinedDeep(normalizedOrder) as FirestoreOrderData;
 };
 
 const fromFirestoreOrder = (id: string, data: Record<string, unknown>): Order => {
@@ -83,6 +81,12 @@ export const createOrder = async (orderData: OrderInput): Promise<Order> => {
   const normalizedOrder = normalizeOrderForFirestore(orderData);
   const docRef = await addDoc(collection(db, ORDERS_COLLECTION), normalizedOrder);
   return fromFirestoreOrder(docRef.id, normalizedOrder);
+};
+
+export const getOrderById = async (orderId: string): Promise<Order | null> => {
+  const docSnapshot = await getDoc(doc(db, ORDERS_COLLECTION, orderId));
+  if (!docSnapshot.exists()) return null;
+  return fromFirestoreOrder(docSnapshot.id, docSnapshot.data());
 };
 
 export const updateOrderStatus = async (orderId: string, status: OrderStatus): Promise<void> => {

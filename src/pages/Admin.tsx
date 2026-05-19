@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus, Search, UtensilsCrossed, ClipboardList, ChefHat, Menu, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MenuItem } from '@/types/kiosk';
-import { menuItems as initialMenuItems, categories } from '@/data/menuData';
+import { menuItems as fallbackMenuItems, categories } from '@/data/menuData';
+import { subscribeToFoods, createFood, updateFood, deleteFood } from '@/services/foodService';
+import { seedAllDefaultData } from '@/services/seedService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AdminMenuItemCard } from '@/components/admin/AdminMenuItemCard';
@@ -14,13 +16,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatPrice } from '@/lib/currency';
 
 const Admin = () => {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(fallbackMenuItems);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const unsubscribe = subscribeToFoods(
+      nextFoods => {
+        if (nextFoods.length > 0) {
+          setMenuItems(nextFoods);
+        } else {
+          setMenuItems(fallbackMenuItems);
+        }
+        setLoading(false);
+        setError(null);
+      },
+      subscriptionError => {
+        console.error('Admin menu subscription failed:', subscriptionError);
+        setMenuItems(fallbackMenuItems);
+        setError("Menyu yuklanmadi. Keshdan foydalanilmoqda.");
+        setLoading(false);
+      },
+    );
+
+    return unsubscribe;
+  }, []);
 
   const filteredItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -28,51 +54,78 @@ const Admin = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const handleAddItem = (item: Omit<MenuItem, 'id'>) => {
-    const newItem: MenuItem = {
-      ...item,
-      id: `item-${Date.now()}`,
-    };
-    setMenuItems(prev => [...prev, newItem]);
-    setIsFormOpen(false);
-    toast({
-      title: "Mahsulot qo'shildi",
-      description: `${item.name} menyuga qo'shildi.`,
-    });
+  const handleAddItem = async (item: Omit<MenuItem, 'id'>) => {
+    try {
+      await createFood(item);
+      setIsFormOpen(false);
+      toast({
+        title: "Mahsulot qo'shildi",
+        description: `${item.name} menyuga qo'shildi.`,
+      });
+    } catch (error) {
+      console.error('Failed to add food:', error);
+      toast({
+        title: "Mahsulot qo'shilmadi",
+        description: "Firebase sozlamalarini tekshiring.",
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleEditItem = (item: Omit<MenuItem, 'id'>) => {
+  const handleEditItem = async (item: Omit<MenuItem, 'id'>) => {
     if (!editingItem) return;
-    setMenuItems(prev =>
-      prev.map(i => (i.id === editingItem.id ? { ...item, id: editingItem.id } : i))
-    );
-    setEditingItem(null);
-    toast({
-      title: 'Mahsulot yangilandi',
-      description: `${item.name} yangilandi.`,
-    });
+    try {
+      await updateFood(editingItem.id, item);
+      setEditingItem(null);
+      toast({
+        title: 'Mahsulot yangilandi',
+        description: `${item.name} yangilandi.`,
+      });
+    } catch (error) {
+      console.error('Failed to update food:', error);
+      toast({
+        title: 'Mahsulot yangilanmadi',
+        description: "Firebase sozlamalarini tekshiring.",
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = async (id: string) => {
     const item = menuItems.find(i => i.id === id);
-    setMenuItems(prev => prev.filter(i => i.id !== id));
-    toast({
-      title: "Mahsulot o'chirildi",
-      description: `${item?.name} menyudan olib tashlandi.`,
-    });
+    try {
+      await deleteFood(id);
+      toast({
+        title: "Mahsulot o'chirildi",
+        description: `${item?.name} menyudan olib tashlandi.`,
+      });
+    } catch (error) {
+      console.error('Failed to delete food:', error);
+      toast({
+        title: "Mahsulot o'chirilmadi",
+        description: "Firebase sozlamalarini tekshiring.",
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleToggleAvailability = (id: string) => {
-    setMenuItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, available: !item.available } : item
-      )
-    );
+  const handleToggleAvailability = async (id: string) => {
     const item = menuItems.find(i => i.id === id);
-    toast({
-      title: item?.available ? 'Mavjud emas' : 'Mavjud',
-      description: `${item?.name} endi ${item?.available ? 'mavjud emas' : 'mavjud'}.`,
-    });
+    if (!item) return;
+    try {
+      await updateFood(id, { available: !item.available });
+      toast({
+        title: item.available ? 'Mavjud emas' : 'Mavjud',
+        description: `${item.name} endi ${item.available ? 'mavjud emas' : 'mavjud'}.`,
+      });
+    } catch (error) {
+      console.error('Failed to toggle availability:', error);
+      toast({
+        title: 'Holat o\'zgartirilmadi',
+        description: "Firebase sozlamalarini tekshiring.",
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -92,6 +145,25 @@ const Admin = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button onClick={async () => {
+              try {
+                await seedAllDefaultData();
+                toast({
+                  title: 'Demo maʼlumotlar qoʻshildi',
+                  description: 'Oldingi menyu, kategoriya va stollar Firestore-ga qoʻshildi.',
+                });
+              } catch (error) {
+                console.error('Failed to seed demo data:', error);
+                toast({
+                  title: 'Demo maʼlumotlar qoʻshilmadi',
+                  description: 'Firebase sozlamalarini tekshiring.',
+                  variant: 'destructive',
+                });
+              }
+            }} className="hidden sm:flex gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
+              <Plus className="w-5 h-5" />
+              Seed demo data
+            </Button>
             <Button asChild className="hidden sm:flex gap-2 rounded-xl">
               <Link to="/kitchen">
                 <ChefHat className="w-5 h-5" />
